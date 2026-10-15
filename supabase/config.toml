@@ -1,0 +1,11 @@
+# Minimal project config for the Supabase CLI. Run `supabase link` to attach
+# this folder to your hosted project.
+project_id = "toto"
+
+[auth]
+enabled = true
+enable_anonymous_sign_ins = true
+
+[functions.tienlen]
+# The function authenticates the caller itself (see authenticate() in index.ts).
+verify_jwt = true
