@@ -26,7 +26,7 @@ List<PlayingCard>? chooseBotMove(GameState s, int seat) {
 
   // How costly it is to give up these cards. Lower is better.
   double cost(Combo c) {
-    var score = c.highest.value.toDouble();
+    var score = c.rankCard.value.toDouble();
     if (c.cards.any((card) => card.rank == rankTwo)) score += 60;
     if (_isBomb(c)) score += 80;
     // Penalise splitting a pair/triple/four for a smaller combo.
@@ -73,7 +73,7 @@ List<PlayingCard>? chooseBotMove(GameState s, int seat) {
     if (!expensive) return true;
     // Chopping a 2 is always worth it; otherwise save power cards for when
     // an opponent is about to go out or the bot is running low.
-    return trick.highest.rank == rankTwo ||
+    return trick.rankCard.rank == rankTwo ||
         opponentsNearOut ||
         hand.length <= 4;
   }).toList()..sort((a, b) => cost(a).compareTo(cost(b)));
@@ -81,7 +81,7 @@ List<PlayingCard>? chooseBotMove(GameState s, int seat) {
 
   // Don't break up a big structure just to follow a low single early on.
   final best = candidates.first;
-  final choppingTwo = trick.highest.rank == rankTwo;
+  final choppingTwo = trick.rankCard.rank == rankTwo;
   if (!choppingTwo && !opponentsNearOut && cost(best) > 70 && hand.length > 6) {
     return null;
   }
@@ -90,4 +90,5 @@ List<PlayingCard>? chooseBotMove(GameState s, int seat) {
 
 bool _isBomb(Combo c) =>
     c.type == ComboType.four ||
-    (c.type == ComboType.doubleSequence && c.pairCount >= 3);
+    (c.type == ComboType.doubleSequence && c.pairCount >= 3) ||
+    c.isStraightFlush;

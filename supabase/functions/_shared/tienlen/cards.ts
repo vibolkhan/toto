@@ -28,7 +28,7 @@ export function dealHands(players = 4): Card[][] {
     deck.slice(i * 13, i * 13 + 13).sort((a, b) => a - b));
 }
 
-export type ComboType = "single" | "pair" | "triple" | "four" | "sequence" | "doubleSequence";
+export type ComboType = "single" | "pair" | "triple" | "four" | "sequence" | "doubleSequence" | "fullHouse";
 
 export interface Combo {
   type: ComboType;
@@ -36,12 +36,24 @@ export interface Combo {
 }
 
 export const highest = (c: Combo): Card => c.cards[c.cards.length - 1];
+/** Card that ranks combos of the same type; for a full house, the triple's top card. */
+export const rankCard = (c: Combo): Card =>
+  c.type !== "fullHouse"
+    ? highest(c)
+    : rankOf(c.cards[4]) === rankOf(c.cards[2]) ? c.cards[4] : c.cards[2];
 export const pairCount = (c: Combo): number =>
   c.type === "doubleSequence" ? c.cards.length / 2 : 0;
 const isSingleTwo = (c: Combo) => c.type === "single" && rankOf(highest(c)) === RANK_TWO;
 const isPairOfTwos = (c: Combo) => c.type === "pair" && rankOf(highest(c)) === RANK_TWO;
+/** A sequence whose cards all share one suit. */
+export const isSuitedSequence = (c: Combo) =>
+  c.type === "sequence" && c.cards.every((x) => x % 4 === c.cards[0] % 4);
+/** A 5-card sequence whose cards all share one suit. */
+export const isStraightFlush = (c: Combo) => isSuitedSequence(c) && c.cards.length === 5;
 
+/** Runs top out at A: a 2 can never be part of a sequence. */
 function isConsecutive(ranks: number[]): boolean {
+  if (ranks[ranks.length - 1] === RANK_TWO) return false;
   for (let i = 1; i < ranks.length; i++) {
     if (ranks[i] !== ranks[i - 1] + 1) return false;
   }
@@ -61,7 +73,7 @@ export function detectCombo(input: Card[]): Combo | null {
     return type ? { type, cards } : null;
   }
   if (n >= 3 && isConsecutive(ranks)) return { type: "sequence", cards };
-  if (n >= 6 && n % 2 === 0) {
+  if (n >= 4 && n % 2 === 0) {
     const pairRanks: number[] = [];
     for (let i = 0; i < n; i += 2) {
       if (ranks[i] !== ranks[i + 1]) return null;
@@ -69,27 +81,39 @@ export function detectCombo(input: Card[]): Combo | null {
     }
     if (isConsecutive(pairRanks)) return { type: "doubleSequence", cards };
   }
+  // Full house: a triple and a pair of adjacent ranks (no 2s).
+  if (
+    n === 5 &&
+    ((ranks[0] === ranks[2] && ranks[3] === ranks[4]) ||
+      (ranks[0] === ranks[1] && ranks[2] === ranks[4])) &&
+    isConsecutive([ranks[0], ranks[4]])
+  ) return { type: "fullHouse", cards };
   return null;
 }
 
 export function canBeat(previous: Combo | null, next: Combo): boolean {
   if (previous === null) return true;
+  // A single-suit run is only beaten by a higher single-suit run of the same
+  // length (any suit).
+  if (isSuitedSequence(previous)) {
+    return isSuitedSequence(next) && next.cards.length === previous.cards.length &&
+      highest(next) > highest(previous);
+  }
   if (
     previous.type === next.type &&
     previous.cards.length === next.cards.length &&
-    highest(next) > highest(previous)
+    rankCard(next) > rankCard(previous)
   ) return true;
 
+  if (isStraightFlush(next)) {
+    return isSingleTwo(previous) || previous.type === "four";
+  }
   const nextPairs = pairCount(next);
-  if (next.type === "doubleSequence" && nextPairs === 3) {
+  if (next.type === "four") {
     return isSingleTwo(previous);
   }
-  if (next.type === "four") {
-    return isSingleTwo(previous) || isPairOfTwos(previous) || pairCount(previous) === 3;
-  }
   if (next.type === "doubleSequence" && nextPairs === 4) {
-    return isSingleTwo(previous) || isPairOfTwos(previous) ||
-      pairCount(previous) === 3 || previous.type === "four";
+    return isPairOfTwos(previous) || pairCount(previous) === 3 || previous.type === "four";
   }
   return false;
 }

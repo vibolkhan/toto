@@ -191,13 +191,26 @@ List<Combo> possibleCombos(List<PlayingCard> hand) {
     }
   }
 
-  // Double sequences of >= 3 pairs.
+  // Double sequences of >= 2 pairs.
   for (var start = 0; start < 13; start++) {
-    for (var end = start + 2; end < 13; end++) {
+    for (var end = start + 1; end < 13; end++) {
       if (byRank.sublist(start, end + 1).any((r) => r.length < 2)) break;
       final base = [for (var r = start; r < end; r++) ...byRank[r].take(2)];
       for (final topPair in _subsets(byRank[end]).where((p) => p.length == 2)) {
         add([...base, ...topPair]);
+      }
+    }
+  }
+
+  // Full houses: a triple plus a pair of an adjacent rank, below the 2s.
+  for (var t = 0; t < rankTwo; t++) {
+    for (final p in [t - 1, t + 1]) {
+      if (p < 0 || p >= rankTwo) continue;
+      final pairs = _subsets(byRank[p]).where((c) => c.length == 2).toList();
+      for (final triple in _subsets(byRank[t]).where((c) => c.length == 3)) {
+        for (final pair in pairs) {
+          add([...triple, ...pair]);
+        }
       }
     }
   }

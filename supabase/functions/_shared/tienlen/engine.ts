@@ -9,9 +9,11 @@ import {
   detectInstantWin,
   highest,
   INSTANT_WINS,
+  isStraightFlush,
   type InstantWin,
   pairCount,
   RANK_TWO,
+  rankCard,
   rankOf,
   THREE_OF_SPADES,
 } from "./cards.ts";
@@ -199,12 +201,22 @@ export function possibleCombos(hand: Card[]): Combo[] {
   }
 
   for (let start = 0; start < 13; start++) {
-    for (let end = start + 2; end < 13; end++) {
+    for (let end = start + 1; end < 13; end++) {
       if (byRank.slice(start, end + 1).some((r) => r.length < 2)) break;
       const base: Card[] = [];
       for (let r = start; r < end; r++) base.push(...byRank[r].slice(0, 2));
       for (const top of subsets(byRank[end]).filter((p) => p.length === 2)) {
         add([...base, ...top]);
+      }
+    }
+  }
+
+  for (let t = 0; t < RANK_TWO; t++) {
+    for (const p of [t - 1, t + 1]) {
+      if (p < 0 || p >= RANK_TWO) continue;
+      const pairs = subsets(byRank[p]).filter((c) => c.length === 2);
+      for (const triple of subsets(byRank[t]).filter((c) => c.length === 3)) {
+        for (const pair of pairs) add([...triple, ...pair]);
       }
     }
   }
@@ -214,7 +226,7 @@ export function possibleCombos(hand: Card[]): Combo[] {
 export const legalPlays = (s: GameState, seat: number): Combo[] =>
   possibleCombos(s.hands[seat]).filter((c) => validatePlay(s, seat, c.cards) === null);
 
-const isBomb = (c: Combo) => c.type === "four" || pairCount(c) >= 3;
+const isBomb = (c: Combo) => c.type === "four" || pairCount(c) >= 3 || isStraightFlush(c);
 
 /** Heuristic bot, mirrors chooseBotMove in lib/engine/bot.dart. Null means pass. */
 export function chooseBotMove(s: GameState, seat: number): Card[] | null {
@@ -232,7 +244,7 @@ export function chooseBotMove(s: GameState, seat: number): Card[] | null {
   for (const c of hand) counts[rankOf(c)]++;
 
   const cost = (c: Combo): number => {
-    let score = highest(c);
+    let score = rankCard(c);
     if (c.cards.some((x) => rankOf(x) === RANK_TWO)) score += 60;
     if (isBomb(c)) score += 80;
     if (
@@ -258,8 +270,7 @@ export function chooseBotMove(s: GameState, seat: number): Card[] | null {
     return (safe.length ? safe : options)[0].cards;
   }
 
-  const trickTop = s.trick[s.trick.length - 1];
-  const choppingTwo = rankOf(trickTop) === RANK_TWO;
+  const choppingTwo = rankOf(rankCard(detectCombo(s.trick)!)) === RANK_TWO;
   const candidates = legal.filter((c) => {
     const expensive = isBomb(c) || c.cards.some((x) => rankOf(x) === RANK_TWO);
     return !expensive || choppingTwo || opponentsNearOut || hand.length <= 4;
