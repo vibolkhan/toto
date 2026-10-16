@@ -89,6 +89,26 @@ A player whose dealt hand contains one of these wins immediately. They are liste
 3. **Six pairs**
 4. **Four triples**
 
+### Scoring
+Points add up across the games in a session. Each seat plate shows its running total.
+
+| Event | Points |
+|---|---|
+| Finish 1st / 2nd / 3rd / 4th | +10 / +5 / −5 / −10 |
+| Chop a single 2 with a bomb | Bomber +10, the player of the 2 −10 |
+| Chop a pair of 2s with a bomb | Bomber +20, the player of the 2s −20 |
+| Chop a bomb or a 3-pair double sequence with a bomb | Bomber +10, the chopped player −10 |
+| Instant win | Winner +30, every other player −10 |
+
+- Chop points are scored as soon as the bomb is played.
+- If a bomb is chopped by a bigger bomb, each chop scores on its own.
+
+## Sound
+
+Sound effects play for dealing, playing, passing, bombs, going out, winning and losing, and when it is your turn. Tap the speaker icon in the top bar to mute them.
+
+The sounds come from [Kenney.nl](https://kenney.nl) packs (Casino Audio, Interface Sounds, Impact Sounds and Music Jingles). They are CC0, so no credit is required. They were converted to `.m4a` so they play on every platform, and they live in `assets/sounds/`.
+
 ## Development
 
 The rules are implemented twice, and the two copies must stay in sync:

@@ -4,6 +4,8 @@ import 'instant_win.dart';
 
 const int seatCount = 4;
 
+const List<int> zeroScores = [0, 0, 0, 0];
+
 /// The most recent thing a seat did, for display.
 class LastAction {
   const LastAction.play(this.seat, this.cards) : passed = false;
@@ -28,6 +30,8 @@ class GameState {
     this.lastAction,
     this.instantWin,
     this.instantWinSeat,
+    this.scores = zeroScores,
+    this.gamePoints = zeroScores,
   });
 
   /// Cards held by each seat, sorted low to high.
@@ -60,6 +64,12 @@ class GameState {
   final InstantWin? instantWin;
   final int? instantWinSeat;
 
+  /// Running total for each seat over the session, including this game.
+  final List<int> scores;
+
+  /// Points each seat has won or lost in this game so far.
+  final List<int> gamePoints;
+
   bool get isOver => finished.length == seatCount || instantWin != null;
 
   bool get isLeading => trick == null;
@@ -86,6 +96,8 @@ class GameState {
     List<int>? finished,
     bool? mustPlayThreeOfSpades,
     LastAction? lastAction,
+    List<int>? scores,
+    List<int>? gamePoints,
   }) {
     return GameState(
       hands: hands ?? this.hands,
@@ -100,6 +112,18 @@ class GameState {
       lastAction: lastAction ?? this.lastAction,
       instantWin: instantWin,
       instantWinSeat: instantWinSeat,
+      scores: scores ?? this.scores,
+      gamePoints: gamePoints ?? this.gamePoints,
+    );
+  }
+
+  /// Adds [deltas] to both this game's points and the running totals.
+  GameState addPoints(List<int> deltas) {
+    return copyWith(
+      scores: [for (var i = 0; i < seatCount; i++) scores[i] + deltas[i]],
+      gamePoints: [
+        for (var i = 0; i < seatCount; i++) gamePoints[i] + deltas[i],
+      ],
     );
   }
 }

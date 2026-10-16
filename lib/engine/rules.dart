@@ -43,3 +43,21 @@ bool _bombBeats(Combo previous, Combo next) {
       return false;
   }
 }
+
+/// Points a bomb [next] takes from the player who played [previous]:
+/// 20 for a pair of 2s, 10 for a single 2, a 3-pair double sequence or
+/// another bomb, otherwise 0.
+int chopPoints(Combo previous, Combo next) {
+  if (!next.isBomb) return 0;
+  if (previous.isPairOfTwos) return 20;
+  if (previous.isSingleTwo || previous.isBomb || previous.pairCount == 3) {
+    return 10;
+  }
+  return 0;
+}
+
+/// Points for finishing 1st, 2nd, 3rd and 4th.
+const placePoints = [10, 5, -5, -10];
+
+/// An instant winner takes this many points from each other player.
+const instantWinPoints = 10;

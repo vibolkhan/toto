@@ -12,6 +12,7 @@ class SeatPlate extends StatelessWidget {
     required this.isBot,
     this.passed = false,
     this.place,
+    this.score = 0,
     this.showBacks = true,
   });
 
@@ -21,6 +22,9 @@ class SeatPlate extends StatelessWidget {
   final bool isBot;
   final bool passed;
   final int? place;
+
+  /// Running session total.
+  final int score;
   final bool showBacks;
 
   @override
@@ -82,6 +86,17 @@ class SeatPlate extends StatelessWidget {
               Text(
                 '$cardCount',
                 style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(width: 6),
+              const Icon(Icons.star, size: 12, color: Color(0xFFFFC107)),
+              const SizedBox(width: 2),
+              Text(
+                '$score',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               if (badge != null) ...[const SizedBox(width: 6), badge],
             ],

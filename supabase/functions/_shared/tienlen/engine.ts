@@ -3,15 +3,18 @@
 import {
   canBeat,
   type Card,
+  chopPoints,
   type Combo,
   dealHands,
   detectCombo,
   detectInstantWin,
   highest,
+  INSTANT_WIN_POINTS,
   INSTANT_WINS,
   isStraightFlush,
   type InstantWin,
   pairCount,
+  PLACE_POINTS,
   RANK_TWO,
   rankCard,
   rankOf,
@@ -39,6 +42,10 @@ export interface GameState {
   lastAction: LastAction | null;
   instantWin: InstantWin | null;
   instantWinSeat: number | null;
+  /** Running total for each seat over the session, including this game. */
+  scores: number[];
+  /** Points each seat has won or lost in this game so far. */
+  gamePoints: number[];
 }
 
 /** The part of the state stored in `games.state`, visible to every player. */
@@ -62,13 +69,31 @@ export function toPublic(s: GameState): PublicState {
 
 export function fromPublic(p: PublicState, hands: Card[][]): GameState {
   const { handCounts: _c, isOver: _o, ...rest } = p;
-  return { ...rest, hands };
+  // Games saved before scoring was added have no scores.
+  return {
+    ...rest,
+    scores: p.scores ?? ZERO_SCORES,
+    gamePoints: p.gamePoints ?? ZERO_SCORES,
+    hands,
+  };
+}
+
+const ZERO_SCORES = [0, 0, 0, 0];
+
+/** Adds `deltas` to both this game's points and the running totals. */
+function addPoints(s: GameState, deltas: number[]): GameState {
+  return {
+    ...s,
+    scores: s.scores.map((v, i) => v + deltas[i]),
+    gamePoints: s.gamePoints.map((v, i) => v + deltas[i]),
+  };
 }
 
 export function startGame(
   dealt: Card[][],
   gameNo = 1,
   previousWinner: number | null = null,
+  previousScores: number[] = ZERO_SCORES,
 ): GameState {
   const hands = dealt.map((h) => [...h].sort((a, b) => a - b));
   const leader = previousWinner ?? hands.findIndex((h) => h.includes(THREE_OF_SPADES));
@@ -84,27 +109,37 @@ export function startGame(
     lastAction: null,
     instantWin: null,
     instantWinSeat: null,
+    scores: previousScores,
+    gamePoints: ZERO_SCORES,
   };
   for (const kind of INSTANT_WINS) {
     for (let i = 0; i < SEATS; i++) {
       const seat = (leader + i) % SEATS;
       if (detectInstantWin(hands[seat]) === kind) {
-        return {
-          ...base,
-          turn: seat,
-          finished: [seat],
-          mustPlayThreeOfSpades: false,
-          instantWin: kind,
-          instantWinSeat: seat,
-        };
+        return addPoints(
+          {
+            ...base,
+            turn: seat,
+            finished: [seat],
+            mustPlayThreeOfSpades: false,
+            instantWin: kind,
+            instantWinSeat: seat,
+          },
+          [0, 1, 2, 3].map((i) =>
+            i === seat ? INSTANT_WIN_POINTS * (SEATS - 1) : -INSTANT_WIN_POINTS
+          ),
+        );
       }
     }
   }
   return base;
 }
 
-export const dealGame = (gameNo = 1, previousWinner: number | null = null) =>
-  startGame(dealHands(), gameNo, previousWinner);
+export const dealGame = (
+  gameNo = 1,
+  previousWinner: number | null = null,
+  previousScores: number[] = ZERO_SCORES,
+) => startGame(dealHands(), gameNo, previousWinner, previousScores);
 
 export function validatePlay(s: GameState, seat: number, cards: Card[]): string | null {
   if (isOver(s)) return "The game is over";
@@ -130,7 +165,7 @@ export function play(s: GameState, seat: number, cards: Card[]): GameState {
   const finished = [...s.finished];
   if (hands[seat].length === 0) finished.push(seat);
 
-  const next: GameState = {
+  let next: GameState = {
     ...s,
     hands,
     trick: combo.cards,
@@ -139,8 +174,22 @@ export function play(s: GameState, seat: number, cards: Card[]): GameState {
     mustPlayThreeOfSpades: false,
     lastAction: { seat, passed: false, cards: combo.cards },
   };
+  // Chopping with a bomb takes points from whoever played the beaten combo.
+  const chop = s.trick ? chopPoints(detectCombo(s.trick)!, combo) : 0;
+  if (chop > 0) {
+    next = addPoints(
+      next,
+      [0, 1, 2, 3].map((i) => i === seat ? chop : i === s.trickOwner ? -chop : 0),
+    );
+  }
   const active = [0, 1, 2, 3].filter((i) => !finished.includes(i));
-  if (active.length === 1) return { ...next, finished: [...finished, active[0]] };
+  if (active.length === 1) {
+    const order = [...finished, active[0]];
+    return addPoints(
+      { ...next, finished: order },
+      [0, 1, 2, 3].map((i) => PLACE_POINTS[order.indexOf(i)]),
+    );
+  }
   return advance(next, seat);
 }
 

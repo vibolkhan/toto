@@ -35,6 +35,10 @@ class Combo {
   /// A 5-card sequence whose cards all share one suit.
   bool get isStraightFlush => isSuitedSequence && length == 5;
 
+  /// Four of a kind, a straight flush or a 4-pair double sequence.
+  bool get isBomb =>
+      type == ComboType.four || isStraightFlush || pairCount == 4;
+
   /// Returns the combo formed by [cards], or null if they are not a legal play.
   static Combo? detect(Iterable<PlayingCard> cards) {
     final sorted = cards.toList()..sort();

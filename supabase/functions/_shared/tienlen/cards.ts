@@ -50,6 +50,9 @@ export const isSuitedSequence = (c: Combo) =>
   c.type === "sequence" && c.cards.every((x) => x % 4 === c.cards[0] % 4);
 /** A 5-card sequence whose cards all share one suit. */
 export const isStraightFlush = (c: Combo) => isSuitedSequence(c) && c.cards.length === 5;
+/** Four of a kind, a straight flush or a 4-pair double sequence. */
+export const isBomb = (c: Combo) =>
+  c.type === "four" || isStraightFlush(c) || pairCount(c) === 4;
 
 /** Runs top out at A: a 2 can never be part of a sequence. */
 function isConsecutive(ranks: number[]): boolean {
@@ -117,6 +120,23 @@ export function canBeat(previous: Combo | null, next: Combo): boolean {
   }
   return false;
 }
+
+/**
+ * Points a bomb `next` takes from the player who played `previous`:
+ * 20 for a pair of 2s, 10 for a single 2, a 3-pair double sequence or
+ * another bomb, otherwise 0.
+ */
+export function chopPoints(previous: Combo, next: Combo): number {
+  if (!isBomb(next)) return 0;
+  if (isPairOfTwos(previous)) return 20;
+  if (isSingleTwo(previous) || isBomb(previous) || pairCount(previous) === 3) return 10;
+  return 0;
+}
+
+/** Points for finishing 1st, 2nd, 3rd and 4th. */
+export const PLACE_POINTS = [10, 5, -5, -10];
+/** An instant winner takes this many points from each other player. */
+export const INSTANT_WIN_POINTS = 10;
 
 export type InstantWin = "fourTwos" | "dragon" | "sixPairs" | "fourTriples";
 export const INSTANT_WINS: InstantWin[] = ["fourTwos", "dragon", "sixPairs", "fourTriples"];

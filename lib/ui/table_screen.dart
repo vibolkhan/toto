@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../engine/card.dart';
 import '../game/game_controller.dart';
+import '../game/game_sounds.dart';
 import 'widgets/card_widget.dart';
 import 'widgets/hand_view.dart';
 import 'widgets/opponent_seat.dart';
@@ -23,11 +24,23 @@ class TableScreen extends StatefulWidget {
 
 class _TableScreenState extends State<TableScreen> {
   final Set<PlayingCard> _selected = {};
+  final _sounds = GameSounds();
 
   GameController get _c => widget.controller;
 
   @override
+  void initState() {
+    super.initState();
+    _c.addListener(_onControllerChanged);
+    _onControllerChanged();
+  }
+
+  void _onControllerChanged() => _sounds.update(_c);
+
+  @override
   void dispose() {
+    _c.removeListener(_onControllerChanged);
+    _sounds.dispose();
     _c.dispose();
     super.dispose();
   }
@@ -118,6 +131,7 @@ class _TableScreenState extends State<TableScreen> {
       isBot: v.isBot[seat],
       passed: v.passed.contains(seat),
       place: v.placeOf(seat),
+      score: v.scores[seat],
     );
 
     final hint =
@@ -189,6 +203,7 @@ class _TableScreenState extends State<TableScreen> {
                 isBot: false,
                 passed: v.passed.contains(v.mySeat),
                 place: v.placeOf(v.mySeat),
+                score: v.scores[v.mySeat],
                 showBacks: false,
               ),
               const Spacer(),
@@ -253,7 +268,17 @@ class _TopBar extends StatelessWidget {
             ),
           ),
           Text('Game $gameNo', style: const TextStyle(color: Colors.white70)),
-          const SizedBox(width: 12),
+          ValueListenableBuilder(
+            valueListenable: GameSounds.muted,
+            builder: (context, muted, _) => IconButton(
+              tooltip: muted ? 'Sound off' : 'Sound on',
+              icon: Icon(
+                muted ? Icons.volume_off : Icons.volume_up,
+                color: Colors.white70,
+              ),
+              onPressed: () => GameSounds.muted.value = !muted,
+            ),
+          ),
         ],
       ),
     );
@@ -370,7 +395,10 @@ class _ResultsPanel extends StatelessWidget {
                           ? '${view.seatNames[seat]} (you)'
                           : view.seatNames[seat],
                     ),
-                    trailing: Text('${view.handCounts[seat]} left'),
+                    trailing: _PointsText(
+                      points: view.gamePoints[seat],
+                      total: view.scores[seat],
+                    ),
                   ),
                 const SizedBox(height: 12),
                 if (controller.canStartNextGame)
@@ -388,6 +416,34 @@ class _ResultsPanel extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// This game's points (green or red) followed by the running total.
+class _PointsText extends StatelessWidget {
+  const _PointsText({required this.points, required this.total});
+
+  final int points;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = points > 0
+        ? Colors.green.shade700
+        : points < 0
+        ? Colors.red.shade700
+        : null;
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: points > 0 ? '+$points' : '$points',
+            style: TextStyle(color: color, fontWeight: FontWeight.w800),
+          ),
+          TextSpan(text: '  ·  $total'),
+        ],
       ),
     );
   }

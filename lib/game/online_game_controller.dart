@@ -83,6 +83,8 @@ class OnlineGameController extends GameController {
           : LastAction.play(last['seat'] as int, cards(last['cards'])),
       instantWinLabel: _instantWinLabels[s['instantWin']],
       instantWinSeat: s['instantWinSeat'] as int?,
+      scores: s['scores'] == null ? zeroScores : ints(s['scores']),
+      gamePoints: s['gamePoints'] == null ? zeroScores : ints(s['gamePoints']),
     );
   }
 

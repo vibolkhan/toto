@@ -49,6 +49,8 @@ class LocalGameController extends GameController {
     lastAction: _state.lastAction,
     instantWinLabel: _state.instantWin?.label,
     instantWinSeat: _state.instantWinSeat,
+    scores: _state.scores,
+    gamePoints: _state.gamePoints,
   );
 
   @override
@@ -76,6 +78,7 @@ class LocalGameController extends GameController {
     _state = engine.dealGame(
       gameNo: _state.gameNo + 1,
       previousWinner: _state.winner,
+      previousScores: _state.scores,
       random: _random,
     );
     _error = null;

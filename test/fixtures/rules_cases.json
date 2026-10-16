@@ -100,5 +100,15 @@
     { "hand": ["3S", "3C", "4S", "4C", "6S", "6C", "8S", "8C", "10S", "10C", "QS", "QC", "AH"], "expected": "sixPairs" },
     { "hand": ["3S", "3C", "3D", "5S", "5C", "5D", "7S", "7C", "7D", "9S", "9C", "9D", "AH"], "expected": "fourTriples" },
     { "hand": ["3S", "4C", "5S", "6C", "7S", "8C", "9S", "10C", "JS", "QC", "KS", "2C", "2D"], "expected": null }
+  ],
+  "chops": [
+    { "prev": ["2S"], "next": ["7S", "7C", "7D", "7H"], "points": 10 },
+    { "prev": ["2S", "2H"], "next": ["4S", "4C", "5S", "5C", "6S", "6C", "7S", "7C"], "points": 20 },
+    { "prev": ["5S", "5C", "5D", "5H"], "next": ["9S", "9C", "9D", "9H"], "points": 10 },
+    { "prev": ["5S", "5C", "5D", "5H"], "next": ["3H", "4H", "5H", "6H", "7H"], "points": 10 },
+    { "prev": ["3S", "3C", "4S", "4C", "5S", "5C"], "next": ["8S", "8C", "9S", "9C", "10S", "10C", "JS", "JC"], "points": 10 },
+    { "prev": ["7H"], "next": ["8S"], "points": 0 },
+    { "prev": ["3S", "3C", "4S", "4C", "5S", "5C"], "next": ["6S", "6C", "7S", "7C", "8S", "8C"], "points": 0 },
+    { "prev": ["2S", "2C"], "next": ["2D", "2H"], "points": 0 }
   ]
 }

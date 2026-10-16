@@ -40,4 +40,14 @@ void main() {
       });
     }
   });
+
+  group('chop points', () {
+    for (final c in fixture['chops'] as List) {
+      test('${c['prev']} chopped by ${c['next']} -> ${c['points']}', () {
+        final prev = Combo.detect(cards(c['prev']))!;
+        final next = Combo.detect(cards(c['next']))!;
+        expect(chopPoints(prev, next), c['points']);
+      });
+    }
+  });
 }

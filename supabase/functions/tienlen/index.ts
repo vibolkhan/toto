@@ -240,7 +240,8 @@ async function nextGame(userId: string, roomId: string) {
   if (room.host_id !== userId) throw new HttpError(403, "Only the host can deal");
   const { state, version } = await loadGame(roomId);
   if (!isOver(state)) throw new HttpError(409, "The game is not over yet");
-  const saved = await saveGame(roomId, version, dealGame(state.gameNo + 1, winnerOf(state)));
+  const next = dealGame(state.gameNo + 1, winnerOf(state), state.scores);
+  const saved = await saveGame(roomId, version, next);
   if (!saved) throw new HttpError(409, "Game changed, try again");
   runInBackground(runBots(roomId));
 }

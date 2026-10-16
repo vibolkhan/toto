@@ -70,6 +70,32 @@ void main() {
     expect(s.isOver, isTrue);
     expect(s.finished, [0, 1, 2, 3]);
     expect(s.placeOf(3), 4);
+    expect(s.gamePoints, [10, 5, -5, -10]);
+    expect(s.scores, [10, 5, -5, -10]);
+  });
+
+  test('chopping a 2 with a bomb moves 10 points right away', () {
+    var s = startGame(
+      [c('2S 3S'), c('7S 7C 7D 7H 4S'), c('5S 6S'), c('8S 9S')],
+      gameNo: 2,
+      previousWinner: 0,
+    );
+    s = play(s, 0, c('2S'));
+    s = play(s, 1, c('7S 7C 7D 7H'));
+    expect(s.gamePoints, [-10, 10, 0, 0]);
+  });
+
+  test('scores carry over from earlier games', () {
+    var s = startGame(
+      [c('3S'), c('4S'), c('5S'), c('6S')],
+      previousScores: [1, 2, 3, 4],
+    );
+    expect(s.scores, [1, 2, 3, 4]);
+    expect(s.gamePoints, [0, 0, 0, 0]);
+    s = play(s, 0, c('3S'));
+    s = play(s, 1, c('4S'));
+    s = play(s, 2, c('5S'));
+    expect(s.scores, [11, 7, -2, -6]);
   });
 
   test('instant win ends the game immediately', () {
@@ -83,6 +109,7 @@ void main() {
     expect(s.isOver, isTrue);
     expect(s.winner, 0);
     expect(s.placeOf(2), 2);
+    expect(s.gamePoints, [30, -10, -10, -10]);
   });
 
   test('previous winner leads subsequent games with anything', () {
@@ -114,6 +141,7 @@ void main() {
           expect(s.hands[seat], isEmpty);
         }
       }
+      expect(s.gamePoints.reduce((a, b) => a + b), 0);
       previousWinner = s.winner;
     }
   });

@@ -26,6 +26,8 @@ class TableView {
     this.lastAction,
     this.instantWinLabel,
     this.instantWinSeat,
+    this.scores = zeroScores,
+    this.gamePoints = zeroScores,
   });
 
   final int mySeat;
@@ -44,6 +46,12 @@ class TableView {
   final LastAction? lastAction;
   final String? instantWinLabel;
   final int? instantWinSeat;
+
+  /// Running totals over the session, by seat.
+  final List<int> scores;
+
+  /// Points won or lost in this game, by seat.
+  final List<int> gamePoints;
 
   bool get isMyTurn => !isOver && turn == mySeat;
   bool get isLeading => trickCards.isEmpty;

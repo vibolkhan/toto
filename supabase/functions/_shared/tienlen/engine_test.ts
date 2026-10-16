@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { canBeat, detectCombo, detectInstantWin, parseCard } from "./cards.ts";
+import { canBeat, chopPoints, detectCombo, detectInstantWin, parseCard } from "./cards.ts";
 import { chooseBotMove, dealGame, isOver, pass, play, startGame, winnerOf } from "./engine.ts";
 
 const fixture = JSON.parse(
@@ -28,6 +28,37 @@ test("instant win matches shared fixture", () => {
   for (const c of fixture.instantWin) {
     assert.equal(detectInstantWin(cards(c.hand)), c.expected, JSON.stringify(c));
   }
+});
+
+test("chop points match shared fixture", () => {
+  for (const c of fixture.chops) {
+    const prev = detectCombo(cards(c.prev))!;
+    assert.equal(chopPoints(prev, detectCombo(cards(c.next))!), c.points, JSON.stringify(c));
+  }
+});
+
+test("scoring: placement, chops, instant win and carry-over", () => {
+  const h = (s: string) => cards(s.split(" "));
+
+  let s = startGame([h("3S"), h("4S"), h("5S"), h("6S")], 1, null, [1, 2, 3, 4]);
+  s = play(s, 0, h("3S"));
+  s = play(s, 1, h("4S"));
+  s = play(s, 2, h("5S"));
+  assert.deepEqual(s.gamePoints, [10, 5, -5, -10]);
+  assert.deepEqual(s.scores, [11, 7, -2, -6]);
+
+  s = startGame([h("2S 3S"), h("7S 7C 7D 7H 4S"), h("5S 6S"), h("8S 9S")], 2, 0);
+  s = play(s, 0, h("2S"));
+  s = play(s, 1, h("7S 7C 7D 7H"));
+  assert.deepEqual(s.gamePoints, [-10, 10, 0, 0]);
+
+  s = startGame([
+    h("2S 2C 2D 2H 3S 4S 5S 6S 7S 8S 9S 10S JS"),
+    h("3C 4C 5C 6C 7C 8C 9C 10C JC QC KC AC QS"),
+    h("3D 4D 5D 6D 7D 8D 9D 10D JD QD KD AD KS"),
+    h("3H 4H 5H 6H 7H 8H 9H 10H JH QH KH AH AS"),
+  ]);
+  assert.deepEqual(s.gamePoints, [30, -10, -10, -10]);
 });
 
 test("pass lockout and trick clearing", () => {
@@ -65,6 +96,7 @@ test("500 bot-only games terminate with a full ordering", () => {
       assert.ok(++moves < 500, `game ${g} did not terminate`);
     }
     if (s.instantWin === null) assert.equal(new Set(s.finished).size, 4);
+    assert.equal(s.gamePoints.reduce((a, b) => a + b, 0), 0);
     previousWinner = winnerOf(s);
   }
 });

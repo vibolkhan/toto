@@ -18,10 +18,12 @@ class GameError implements Exception {
 ///
 /// In the first game ([previousWinner] is null) the holder of 3♠ leads and
 /// must include it. Otherwise [previousWinner] leads with anything.
+/// [previousScores] are the running totals carried over from earlier games.
 GameState startGame(
   List<List<PlayingCard>> hands, {
   int gameNo = 1,
   int? previousWinner,
+  List<int> previousScores = zeroScores,
 }) {
   assert(hands.length == seatCount);
   final sortedHands = [for (final h in hands) List<PlayingCard>.of(h)..sort()];
@@ -43,7 +45,11 @@ GameState startGame(
           finished: [seat],
           instantWin: kind,
           instantWinSeat: seat,
-        );
+          scores: previousScores,
+        ).addPoints([
+          for (var i = 0; i < seatCount; i++)
+            i == seat ? instantWinPoints * (seatCount - 1) : -instantWinPoints,
+        ]);
       }
     }
   }
@@ -53,16 +59,22 @@ GameState startGame(
     turn: leader,
     gameNo: gameNo,
     mustPlayThreeOfSpades: previousWinner == null,
+    scores: previousScores,
   );
 }
 
 /// Deals a fresh game. The first game has no [previousWinner].
-GameState dealGame({int gameNo = 1, int? previousWinner, Random? random}) =>
-    startGame(
-      dealHands(random: random),
-      gameNo: gameNo,
-      previousWinner: previousWinner,
-    );
+GameState dealGame({
+  int gameNo = 1,
+  int? previousWinner,
+  List<int> previousScores = zeroScores,
+  Random? random,
+}) => startGame(
+  dealHands(random: random),
+  gameNo: gameNo,
+  previousWinner: previousWinner,
+  previousScores: previousScores,
+);
 
 /// Returns an error message if [seat] may not play [cards], otherwise null.
 String? validatePlay(GameState s, int seat, List<PlayingCard> cards) {
@@ -94,7 +106,7 @@ GameState play(GameState s, int seat, List<PlayingCard> cards) {
   final finished = [...s.finished];
   if (hands[seat].isEmpty) finished.add(seat);
 
-  final next = s.copyWith(
+  var next = s.copyWith(
     hands: hands,
     trick: () => combo,
     trickOwner: () => seat,
@@ -103,12 +115,28 @@ GameState play(GameState s, int seat, List<PlayingCard> cards) {
     lastAction: LastAction.play(seat, combo.cards),
   );
 
+  // Chopping with a bomb takes points from whoever played the beaten combo.
+  final chop = s.trick == null ? 0 : chopPoints(s.trick!, combo);
+  if (chop > 0) {
+    next = next.addPoints([
+      for (var i = 0; i < seatCount; i++)
+        i == seat
+            ? chop
+            : i == s.trickOwner
+            ? -chop
+            : 0,
+    ]);
+  }
+
   final active = [
     for (var i = 0; i < seatCount; i++)
       if (!finished.contains(i)) i,
   ];
   if (active.length == 1) {
-    return next.copyWith(finished: [...finished, active.single]);
+    final order = [...finished, active.single];
+    return next.copyWith(finished: order).addPoints([
+      for (var i = 0; i < seatCount; i++) placePoints[order.indexOf(i)],
+    ]);
   }
   return _advance(next, seat);
 }
