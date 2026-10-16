@@ -13,10 +13,11 @@ class LocalGameController extends GameController {
     required String playerName,
     Random? random,
     this.botDelay = const Duration(milliseconds: 900),
+    this.dealDelay = dealDuration,
   }) : _random = random ?? Random(),
        _names = [playerName, 'Bot 1', 'Bot 2', 'Bot 3'] {
     _state = engine.dealGame(random: _random);
-    _scheduleBots();
+    _scheduleBots(afterDeal: true);
   }
 
   static const int humanSeat = 0;
@@ -24,6 +25,9 @@ class LocalGameController extends GameController {
   final Random _random;
   final List<String> _names;
   final Duration botDelay;
+
+  /// Extra wait before the first move of a game, while the cards are dealt.
+  final Duration dealDelay;
   late GameState _state;
   Timer? _botTimer;
   String? _error;
@@ -83,7 +87,7 @@ class LocalGameController extends GameController {
     );
     _error = null;
     notifyListeners();
-    _scheduleBots();
+    _scheduleBots(afterDeal: true);
   }
 
   void _apply(GameState Function() action) {
@@ -97,10 +101,10 @@ class LocalGameController extends GameController {
     _scheduleBots();
   }
 
-  void _scheduleBots() {
+  void _scheduleBots({bool afterDeal = false}) {
     _botTimer?.cancel();
     if (_disposed || _state.isOver || _state.turn == humanSeat) return;
-    _botTimer = Timer(botDelay, () {
+    _botTimer = Timer(afterDeal ? dealDelay + botDelay : botDelay, () {
       final seat = _state.turn;
       final move = chooseBotMove(_state, seat);
       _state = move == null

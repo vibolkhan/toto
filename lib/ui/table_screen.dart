@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../engine/card.dart';
@@ -22,24 +24,43 @@ class TableScreen extends StatefulWidget {
   State<TableScreen> createState() => _TableScreenState();
 }
 
-class _TableScreenState extends State<TableScreen> {
+class _TableScreenState extends State<TableScreen>
+    with SingleTickerProviderStateMixin {
   final Set<PlayingCard> _selected = {};
   final _sounds = GameSounds();
+  late final _deal = AnimationController(vsync: this, duration: dealDuration);
+  int? _dealtGameNo;
 
   GameController get _c => widget.controller;
 
   @override
   void initState() {
     super.initState();
+    _sounds.preload();
     _c.addListener(_onControllerChanged);
     _onControllerChanged();
   }
 
-  void _onControllerChanged() => _sounds.update(_c);
+  void _onControllerChanged() {
+    // Deal a new game on screen in step with its deal sound.
+    final gameNo = _c.view?.gameNo;
+    if (gameNo != null && gameNo != _dealtGameNo) {
+      _dealtGameNo = gameNo;
+      _deal.forward(from: 0);
+    }
+    _sounds.update(_c);
+  }
+
+  bool get _dealing => _deal.isAnimating;
+
+  /// Cards each seat has received so far while dealing.
+  int _dealtCount(int handCount) =>
+      _dealing ? min(handCount, (13 * _deal.value).ceil()) : handCount;
 
   @override
   void dispose() {
     _c.removeListener(_onControllerChanged);
+    _deal.dispose();
     _sounds.dispose();
     _c.dispose();
     super.dispose();
@@ -100,7 +121,7 @@ class _TableScreenState extends State<TableScreen> {
         decoration: const BoxDecoration(gradient: feltGradient),
         child: SafeArea(
           child: ListenableBuilder(
-            listenable: _c,
+            listenable: Listenable.merge([_c, _deal]),
             builder: (context, _) {
               final v = _c.view;
               if (v == null) {
@@ -126,7 +147,7 @@ class _TableScreenState extends State<TableScreen> {
     int seatAt(int offset) => (v.mySeat + offset) % 4;
     Widget plate(int seat) => SeatPlate(
       name: v.seatNames[seat],
-      cardCount: v.handCounts[seat],
+      cardCount: _dealtCount(v.handCounts[seat]),
       isTurn: !v.isOver && v.turn == seat,
       isBot: v.isBot[seat],
       passed: v.passed.contains(seat),
@@ -148,9 +169,10 @@ class _TableScreenState extends State<TableScreen> {
     final canPlay =
         v.isMyTurn &&
         !_c.busy &&
+        !_dealing &&
         _selected.isNotEmpty &&
         v.validateSelection(_selected.toList()) == null;
-    final canPass = v.isMyTurn && !_c.busy && !v.isLeading;
+    final canPass = v.isMyTurn && !_c.busy && !_dealing && !v.isLeading;
 
     return Column(
       children: [
@@ -198,7 +220,7 @@ class _TableScreenState extends State<TableScreen> {
             children: [
               SeatPlate(
                 name: v.seatNames[v.mySeat],
-                cardCount: v.handCounts[v.mySeat],
+                cardCount: _dealtCount(v.handCounts[v.mySeat]),
                 isTurn: v.isMyTurn,
                 isBot: false,
                 passed: v.passed.contains(v.mySeat),
@@ -233,7 +255,8 @@ class _TableScreenState extends State<TableScreen> {
             cards: v.myHand,
             selected: _selected,
             onToggle: _toggle,
-            enabled: !v.isOver,
+            enabled: !v.isOver && !_dealing,
+            dealt: _dealing ? _dealtCount(v.myHand.length) : null,
           ),
         ),
       ],

@@ -84,6 +84,23 @@ class GameSounds {
     _lastError = c.error;
   }
 
+  /// Sets up the players and loads every sound file ahead of time, so the
+  /// first sound (the deal) starts in step with the screen.
+  void preload() {
+    if (_ensurePlayers() == null) return;
+    final names = [
+      for (final sfx in Sfx.values)
+        if (_variants[sfx] case final n?)
+          for (var i = 1; i <= n; i++) '${sfx.name}_$i'
+        else
+          sfx.name,
+    ];
+    AudioCache.instance
+        .loadAll([for (final name in names) 'sounds/$name.m4a'])
+        .then<void>((_) {})
+        .catchError((Object e) => debugPrint('Sound preload failed: $e'));
+  }
+
   /// AudioPlayer sets itself up in the background and reports a failure
   /// (e.g. the plugin missing after a hot restart) as an uncaught error, so
   /// create the players in a zone that catches it and turns sound off.

@@ -5,6 +5,10 @@ import '../engine/combo.dart';
 import '../engine/game_state.dart';
 import '../engine/rules.dart';
 
+/// How long the table takes to deal a new game, matched to the deal sound.
+/// The first move of a game waits for it (see also DEAL_MS on the server).
+const dealDuration = Duration(milliseconds: 2800);
+
 /// What one player sees of the table. Built from the full engine state in
 /// bot mode, or from the server's public state plus the player's own hand
 /// in online mode.

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../engine/card.dart';
@@ -39,11 +41,22 @@ class SupabaseService {
 
   static String? get userId => _client.auth.currentUser?.id;
 
+  static const _timeout = Duration(seconds: 15);
+  static const _timeoutError = OnlineError(
+    'Server not responding — check your connection',
+  );
+
   static Future<String> ensureSignedIn() async {
     final user = _client.auth.currentUser;
     if (user != null) return user.id;
-    final res = await _client.auth.signInAnonymously();
-    return res.user!.id;
+    try {
+      final res = await _client.auth.signInAnonymously().timeout(_timeout);
+      return res.user!.id;
+    } on TimeoutException {
+      throw _timeoutError;
+    } on AuthException catch (e) {
+      throw OnlineError(e.message);
+    }
   }
 
   static Future<Map<String, dynamic>> _call(
@@ -52,11 +65,12 @@ class SupabaseService {
   ]) async {
     await ensureSignedIn();
     try {
-      final res = await _client.functions.invoke(
-        'tienlen',
-        body: {'action': action, ...params},
-      );
+      final res = await _client.functions
+          .invoke('tienlen', body: {'action': action, ...params})
+          .timeout(_timeout);
       return (res.data as Map?)?.cast<String, dynamic>() ?? const {};
+    } on TimeoutException {
+      throw _timeoutError;
     } on FunctionException catch (e) {
       final details = e.details;
       final message = details is Map && details['error'] is String

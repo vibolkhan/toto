@@ -13,12 +13,17 @@ class HandView extends StatelessWidget {
     required this.selected,
     required this.onToggle,
     this.enabled = true,
+    this.dealt,
   });
 
   final List<PlayingCard> cards;
   final Set<PlayingCard> selected;
   final ValueChanged<PlayingCard> onToggle;
   final bool enabled;
+
+  /// While dealing, how many cards (from the left) have arrived so far.
+  /// Null shows the whole hand.
+  final int? dealt;
 
   static const double _lift = 18;
 
@@ -43,18 +48,20 @@ class HandView extends StatelessWidget {
               height: height,
               child: Stack(
                 children: [
-                  for (var i = 0; i < n; i++)
+                  for (var i = 0; i < min(n, dealt ?? n); i++)
                     AnimatedPositioned(
                       key: ValueKey(cards[i].value),
                       duration: const Duration(milliseconds: 150),
                       left: i * step,
                       top: selected.contains(cards[i]) ? 0 : _lift,
-                      child: GestureDetector(
-                        onTap: enabled ? () => onToggle(cards[i]) : null,
-                        child: CardWidget(
-                          card: cards[i],
-                          width: cardWidth,
-                          selected: selected.contains(cards[i]),
+                      child: _DealIn(
+                        child: GestureDetector(
+                          onTap: enabled ? () => onToggle(cards[i]) : null,
+                          child: CardWidget(
+                            card: cards[i],
+                            width: cardWidth,
+                            selected: selected.contains(cards[i]),
+                          ),
                         ),
                       ),
                     ),
@@ -64,6 +71,30 @@ class HandView extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Drops a card into place the first time it is shown.
+class _DealIn extends StatelessWidget {
+  const _DealIn({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      builder: (context, t, child) => Opacity(
+        opacity: t,
+        child: Transform.translate(
+          offset: Offset(0, -40 * (1 - t)),
+          child: child,
+        ),
+      ),
+      child: child,
     );
   }
 }

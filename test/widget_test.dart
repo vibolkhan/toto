@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:toto/game/game_controller.dart';
 import 'package:toto/game/local_game_controller.dart';
 import 'package:toto/main.dart';
 import 'package:toto/ui/table_screen.dart';
@@ -23,6 +24,7 @@ void main() {
       playerName: 'Me',
       random: Random(1),
       botDelay: const Duration(milliseconds: 10),
+      dealDelay: Duration.zero,
     );
     await tester.pumpWidget(
       MaterialApp(home: TableScreen(controller: controller)),
@@ -36,5 +38,29 @@ void main() {
     }
     final s = controller.state;
     expect(s.isOver || s.turn == LocalGameController.humanSeat, isTrue);
+  });
+
+  testWidgets('bots wait for the deal before the first move', (tester) async {
+    // Find a deal where a bot leads, so the first move is a bot's.
+    var seed = 0;
+    late LocalGameController controller;
+    while (true) {
+      controller = LocalGameController(
+        playerName: 'Me',
+        random: Random(seed++),
+        botDelay: const Duration(milliseconds: 10),
+      );
+      final s = controller.state;
+      if (s.turn != LocalGameController.humanSeat && !s.isOver) break;
+      controller.dispose();
+    }
+    await tester.pumpWidget(
+      MaterialApp(home: TableScreen(controller: controller)),
+    );
+
+    await tester.pump(dealDuration);
+    expect(controller.state.lastAction, isNull);
+    await tester.pump(const Duration(milliseconds: 20));
+    expect(controller.state.lastAction, isNotNull);
   });
 }

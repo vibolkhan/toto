@@ -25,6 +25,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const BOT_DELAY_MS = 900;
+// Clients animate a new deal for this long (dealDuration in game_controller.dart).
+const DEAL_MS = 2800;
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -232,7 +234,7 @@ async function startRoom(userId: string, roomId: string) {
   const existing = await admin.from("games").select("version").eq("room_id", roomId).maybeSingle();
   await saveGame(roomId, existing.data?.version ?? null, dealGame(1, null));
   await must(admin.from("rooms").update({ status: "playing" }).eq("id", roomId));
-  runInBackground(runBots(roomId));
+  runInBackground(runBots(roomId, DEAL_MS));
 }
 
 async function nextGame(userId: string, roomId: string) {
@@ -243,7 +245,7 @@ async function nextGame(userId: string, roomId: string) {
   const next = dealGame(state.gameNo + 1, winnerOf(state), state.scores);
   const saved = await saveGame(roomId, version, next);
   if (!saved) throw new HttpError(409, "Game changed, try again");
-  runInBackground(runBots(roomId));
+  runInBackground(runBots(roomId, DEAL_MS));
 }
 
 // ---------- Moves ----------
@@ -265,14 +267,18 @@ async function humanMove(
   runInBackground(runBots(roomId));
 }
 
-/** Plays bot turns one at a time, with a delay so players can follow along. */
-async function runBots(roomId: string) {
+/**
+ * Plays bot turns one at a time, with a delay so players can follow along.
+ * `initialDelayMs` holds the first move while a new deal is shown.
+ */
+async function runBots(roomId: string, initialDelayMs = 0) {
   for (let i = 0; i < 80; i++) {
     const players = await loadPlayers(roomId);
     const { state, version } = await loadGame(roomId);
     if (isOver(state) || !players.find((p) => p.seat === state.turn)?.is_bot) return;
 
-    await new Promise((r) => setTimeout(r, BOT_DELAY_MS));
+    const delay = BOT_DELAY_MS + (i === 0 ? initialDelayMs : 0);
+    await new Promise((r) => setTimeout(r, delay));
     const move = chooseBotMove(state, state.turn);
     const next = move === null ? pass(state, state.turn) : play(state, state.turn, move);
     // If a concurrent request already advanced the game, just re-read and continue.
